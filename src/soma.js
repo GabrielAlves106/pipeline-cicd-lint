@@ -3,3 +3,5 @@ function soma(a,b) {
 }
 
 module.exports = soma
+
+const password = 1234
