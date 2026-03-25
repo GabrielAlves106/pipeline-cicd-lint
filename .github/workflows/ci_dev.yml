@@ -14,13 +14,14 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Instalar Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Instalar dependências
-        run: npm install
+        run: npm ci
 
       - name: Gerar artefato
         run: zip -r app.zip . -x "node_modules/*" ".git/*"
@@ -44,22 +45,42 @@ jobs:
       - name: Extrair artefato
         run: unzip app.zip
 
-      - name: Instalar Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Instalar dependências
-        run: npm install
+        run: npm ci
 
       - name: Rodar testes
         run: npm test
+
+  quality:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
 
       - name: Análise com SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
         with:
           args: >
-            -Dsonar.projectKey=SEU_PROJECT_KEY
-            -Dsonar.organization=SUA_ORGANIZATION
+            -Dsonar.projectKey=GabrielAlves106_pipeline-cicd-lint
+            -Dsonar.organization=gabrielalves106
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  security:
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Verificar vulnerabilidades (npm audit)
+        run: npm audit --audit-level=high
