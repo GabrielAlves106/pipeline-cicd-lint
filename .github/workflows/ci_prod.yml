@@ -2,7 +2,7 @@ name: CD - Production
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
@@ -13,5 +13,19 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Simular deploy
-        run: echo "Deploy em produção realizado"
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build (opcional)
+        run: echo "Build pronto"
+
+      - name: Rodar migração (simulada)
+        run: echo "Executando migrations..."
+
+      - name: Deploy (simulado)
+        run: echo "Deploy em produção realizado com sucesso"
