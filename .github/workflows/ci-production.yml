@@ -1,17 +1,106 @@
-name: CD - Production
+name: CI - Development
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: production
 
+  quality:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Simular deploy
-        run: echo "Deploy em produção realizado"
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Rodar lint
+        run: npm run lint
+
+      - name: Run Coverage
+        run: npm run test
+
+      - name: Análise com SonarCloud 
+        uses: SonarSource/sonarcloud-github-action@v2 
+        with: 
+          args: > 
+            -Dsonar.projectKey=MSCiriaco81_Pipeline
+            -Dsonar.organization=msciriaco81
+            -Dsonar.sources=.
+        env: 
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Gerar artefato
+        run: zip -r app.zip .
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: app.zip
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+
+      - name: Extrair artefato
+        run: unzip app.zip
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Rodar testes
+        run: npm test
+        
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Build e Push da Imagem
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: gabrielalves007
