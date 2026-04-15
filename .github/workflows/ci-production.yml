@@ -103,4 +103,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: gabrielalves007
+          tags: gabrielalves007/pipeline-cicd:latest
