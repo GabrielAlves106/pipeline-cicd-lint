@@ -2,29 +2,59 @@ name: CI - Development
 
 on:
   push:
-    branches: [dev]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
 
+  quality:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Instalar Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+      
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Rodar lint
+        run: npm run lint
+
+      - name: Run Coverage
+        run: npm run test
+
+      - name: Análise com SonarCloud 
+        uses: SonarSource/sonarcloud-github-action@v2 
+        with: 
+          args: > 
+            -Dsonar.projectKey=MSCiriaco81_Pipeline
+            -Dsonar.organization=msciriaco81
+            -Dsonar.sources=.
+        env: 
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Gerar artefato
-        run: zip -r app.zip . -x "node_modules/*" ".git/*"
+        run: zip -r app.zip .
 
       - name: Publicar artefato
         uses: actions/upload-artifact@v4
@@ -35,27 +65,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: build
-
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: enterpise
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DB_HOST: localhost
-      DB_USER: root
-      DB_PASSWORD: root
-      DB_NAME: enterprise
-
     steps:
       - name: Baixar artefato
         uses: actions/download-artifact@v4
@@ -65,59 +74,33 @@ jobs:
       - name: Extrair artefato
         run: unzip app.zip
 
-      - name: Setup Node
+      - name: Instalar Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Instalar dependências
-        run: npm ci
-
-      - name: Criar tabela de teste
-        run: |
-          sudo apt-get install -y mysql-client
-          mysql -h 127.0.0.1 -u root -proot testdb -e "
-          CREATE TABLE IF NOT EXISTS funcionarios (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255),
-            role VARCHAR(255)
-          );"
+        run: npm install
 
       - name: Rodar testes
         run: npm test
-
-  quality:
+        
+  docker:
     runs-on: ubuntu-latest
     needs: test
-
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Análise com SonarCloud
-        uses: SonarSource/sonarcloud-github-action@v2
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
         with:
-          args: >
-            -Dsonar.projectKey=GabrielAlves106_pipeline-cicd-lint
-            -Dsonar.organization=gabrielalves106
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
 
-  security:
-    runs-on: ubuntu-latest
-    needs: quality
-
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
+      - name: Build e Push da Imagem
+        uses: docker/build-push-action@v5
         with:
-          fetch-depth: 0
-
-      - name: Scan de secrets com Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verificar vulnerabilidades (npm audit)
-        run: npm audit --audit-level=high
+          context: .
+          push: true
+          tags: gabrielalves007

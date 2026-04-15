@@ -5,8 +5,17 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "lint": "eslint .",
+    "lint": "eslint",
     "coverage": "jest --coverage"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "jest": "^30.3.0"
   },
   "jest": {
     "collectCoverage": true,
@@ -16,19 +25,7 @@
       }
     }
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.0.3",
-    "globals": "^17.4.0",
-    "jest": "^30.3.0",
-    "supertest": "^7.2.2"
-  },
   "dependencies": {
-    "express": "^5.2.1",
-    "lodash": "^4.17.20",
-    "mysql2": "^3.20.0"
+    "lodash": "^4.17.20"
   }
 }
